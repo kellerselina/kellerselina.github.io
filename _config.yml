@@ -7,7 +7,7 @@ kramdown:
   math_engine: mathjax
 description: "Associate at Sullivan & Cromwell LLP"
 favicon: true
-favicon_location: "/files/heidelberg_logo.png"
+favicon_location: "/files/logo_keller.svg"
 tracking_id:
 footer: yes
 footer_url: "https://github.com/ankitsultana/researcher"

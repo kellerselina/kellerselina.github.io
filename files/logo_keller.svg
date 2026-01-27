@@ -1,0 +1,7 @@
+<svg xmlns = "http://www.w3.org/2000/svg" viewBox = "0 0 520 160" role = "img" aria-label = "Selina Keller logo">
+	<path d = "M110 120c18 18 40 26 66 26 38 0 62-18 62-44 0-22-16-34-48-40l-22-4c-14-3-20-8-20-16 0-12 12-20 30-20 16 0 30 6 40 18"
+		fill = "none" stroke = "currentColor" stroke-width = "10" stroke-linecap = "round" stroke-linejoin = "round"/>
+	<path d = "M340 22l-88 88V22M252 110v88M340 198l-88-88"
+	transform = "translate(252 22) scale(0.705) translate(-252 -22)"
+	fill = "none" stroke = "currentColor" stroke-width = "14.18" stroke-linecap = "round" stroke-linejoin = "round"/>
+</svg>
