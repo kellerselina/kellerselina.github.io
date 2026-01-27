@@ -1,0 +1,23 @@
+title: "Selina Keller"
+url: "https://kellerselina.github.io"
+baseurl: ""
+markdown: kramdown
+kramdown:
+  input: GFM
+  math_engine: mathjax
+description: "Associate at Sullivan & Cromwell LLP"
+# favicon: true
+# favicon_location: "/files/heidelberg_logo.png"
+tracking_id:
+footer: yes
+footer_url: "https://github.com/ankitsultana/researcher"
+sass:
+  style: compressed
+  sass_dir: _sass
+# nav:
+  # - name: "Main"
+  #  link: "/"
+  # - name: "Resume"
+  #  link: "/files/cv_keller.pdf"
+  # - name: "Example"
+  #   link: "/example"
