@@ -14,10 +14,3 @@ footer_url: "https://github.com/ankitsultana/researcher"
 sass:
   style: compressed
   sass_dir: _sass
-# nav:
-  # - name: "Main"
-  #  link: "/"
-  # - name: "Resume"
-  #  link: "/files/cv_keller.pdf"
-  # - name: "Example"
-  #   link: "/example"
