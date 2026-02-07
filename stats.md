@@ -25,10 +25,44 @@ layout: default
 			choose .xlsx
 		</label>
 		<input id = "xlsxFile" class = "file-input" type = "file" accept = ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+		<label for = "startDate" class = "date-label">start</label>
+		<input id = "startDate" class = "date-input" type = "date">
+		<label for = "endDate" class = "date-label">end</label>
+		<input id = "endDate" class = "date-input" type = "date">
 		<div id = "status" class = "status" aria-live = "polite"></div>
 	</div>
 
 	<div class = "grid" id = "chartGrid" style = "display:none;">
+		<section class = "card" id = "dailyCard" style = "display:none;">
+			<h2>
+				daily
+			</h2>
+			<canvas id = "chartDaily" height = "150"></canvas>
+			<div class = "card-actions">
+				<button class = "action-btn table-toggle" type = "button" data-target = "tableDailyWrap">
+					show table
+				</button>
+				<button class = "action-btn export-btn" type = "button" data-target = "tableDaily">
+					export .csv
+				</button>
+			</div>
+			<div class = "table-wrap" id = "tableDailyWrap" hidden>
+				<table id = "tableDaily" class = "data-table">
+					<thead>
+						<tr>
+							<th>
+								day
+							</th>
+							<th>
+								hours
+							</th>
+						</tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+			</div>
+		</section>
+
 		<section class = "card">
 			<h2>
 				weekly
@@ -48,36 +82,6 @@ layout: default
 						<tr>
 							<th>
 								week
-							</th>
-							<th>
-								hours
-							</th>
-						</tr>
-					</thead>
-					<tbody></tbody>
-				</table>
-			</div>
-		</section>
-
-		<section class = "card">
-			<h2>
-				biweekly (14 days)
-			</h2>
-			<canvas id = "chartBiweekly" height = "150"></canvas>
-			<div class = "card-actions">
-				<button class = "action-btn table-toggle" type = "button" data-target = "tableBiweeklyWrap">
-					show table
-				</button>
-				<button class = "action-btn export-btn" type = "button" data-target = "tableBiweekly">
-					export .csv
-				</button>
-			</div>
-			<div class = "table-wrap" id = "tableBiweeklyWrap" hidden>
-				<table id = "tableBiweekly" class = "data-table">
-					<thead>
-						<tr>
-							<th>
-								two_weeks
 							</th>
 							<th>
 								hours
@@ -151,6 +155,16 @@ layout: default
 		align-items: center;
 		justify-content: center;
 		min-width: 120px;
+	}
+	.date-label {
+		font-size: 0.9rem;
+		color: #333;
+	}
+	.date-input {
+		padding: 8px 10px;
+		border: 1px solid #ddd;
+		border-radius: 3px;
+		font-family: "Inconsolata", monospace;
 	}
 	.status {
 		font-size: 0.9rem;
@@ -273,11 +287,15 @@ layout: default
 	const statusEl = document.getElementById("status");
 	const fileInput = document.getElementById("xlsxFile");
 	const chartGrid = document.getElementById("chartGrid");
+	const startDateInput = document.getElementById("startDate");
+	const endDateInput = document.getElementById("endDate");
 
 	let chartWeekly = null;
-	let chartBiweekly = null;
+	let chartDaily = null;
 	let chartMonthly = null;
 	let lastDateKey = "";
+	let lastRows = null;
+	let lastFields = null;
 	const STATS_PASSWORD = "fands_2025";
 
 	function setStatus(msg) {
@@ -371,14 +389,6 @@ layout: default
 		return new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate() - diff));
 	}
 
-	function biweekStartMondayUTC(dt) {
-		const weekStart = weekStartMondayUTC(dt);
-		const epoch = Date.UTC(1970, 0, 5);
-		const weeksSince = Math.floor((weekStart.getTime() - epoch) / (7 * 86400000));
-		const biweekIndex = Math.floor(weeksSince / 2);
-		return new Date(epoch + biweekIndex * 2 * 7 * 86400000);
-	}
-
 	function monthKeyUTC(dt) {
 		return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}`;
 	}
@@ -437,21 +447,66 @@ layout: default
 		return cleaned;
 	}
 
+	function applyDateFilter(rows) {
+		const startRaw = startDateInput ? startDateInput.value : "";
+		const endRaw = endDateInput ? endDateInput.value : "";
+		const startDt = startRaw ? parseDate(startRaw) : null;
+		const endDt = endRaw ? parseDate(endRaw) : null;
+		if (!startDt && !endDt) return rows;
+		const startMs = startDt ? startDt.getTime() : null;
+		const endMs = endDt ? endDt.getTime() : null;
+		return rows.filter((r) => {
+			const t = r.dt.getTime();
+			if (startMs !== null && t < startMs) return false;
+			if (endMs !== null && t > endMs) return false;
+			return true;
+		});
+	}
+
+	function computeMinMaxDate(rows) {
+		let minDate = null;
+		let maxDate = null;
+		for (const r of rows) {
+			if (!minDate || r.dt < minDate) minDate = r.dt;
+			if (!maxDate || r.dt > maxDate) maxDate = r.dt;
+		}
+		return { minDate, maxDate };
+	}
+
+	function syncDateInputs(rows) {
+		if (!startDateInput || !endDateInput) return;
+		const { minDate, maxDate } = computeMinMaxDate(rows);
+		if (!minDate || !maxDate) return;
+		const minStr = formatDateUTC(minDate);
+		const maxStr = formatDateUTC(maxDate);
+		startDateInput.min = minStr;
+		startDateInput.max = maxStr;
+		endDateInput.min = minStr;
+		endDateInput.max = maxStr;
+		if (!startDateInput.value) startDateInput.value = minStr;
+		if (!endDateInput.value) endDateInput.value = maxStr;
+	}
+
+	function refreshFromLastData() {
+		if (!lastRows || !lastFields) return;
+		handleRows(lastRows, lastFields);
+	}
+
 	function aggregate(cleaned) {
+		const daily = new Map();
 		const weekly = new Map();
-		const biweekly = new Map();
 		const monthly = new Map();
 		let maxDate = null;
 
 		for (const row of cleaned) {
 			if (!keepTypes.has(row.type)) continue;
 			if (!maxDate || row.dt > maxDate) maxDate = row.dt;
+			const d = formatDateUTC(row.dt);
 			const w = formatDateUTC(weekStartMondayUTC(row.dt));
-			const bw = formatDateUTC(biweekStartMondayUTC(row.dt));
 			const m = monthKeyUTC(row.dt);
 
+			daily.set(d, (daily.get(d) || 0) + row.hours);
 			weekly.set(w, (weekly.get(w) || 0) + row.hours);
-			biweekly.set(bw, (biweekly.get(bw) || 0) + row.hours);
 			monthly.set(m, (monthly.get(m) || 0) + row.hours);
 		}
 
@@ -462,8 +517,8 @@ layout: default
 		};
 
 		return {
+			daily: toSortedArray(daily),
 			weekly: toSortedArray(weekly),
-			biweekly: toSortedArray(biweekly),
 			monthly: toSortedArray(monthly),
 			maxDate,
 		};
@@ -557,10 +612,10 @@ layout: default
 	}
 
 	function destroyCharts() {
+		if (chartDaily) chartDaily.destroy();
 		if (chartWeekly) chartWeekly.destroy();
-		if (chartBiweekly) chartBiweekly.destroy();
 		if (chartMonthly) chartMonthly.destroy();
-		chartWeekly = chartBiweekly = chartMonthly = null;
+		chartDaily = chartWeekly = chartMonthly = null;
 	}
 
 	function findHeaderRow(rows) {
@@ -612,8 +667,8 @@ layout: default
 		const link = document.createElement("a");
 		link.href = url;
 		const baseMap = {
+			"tableDaily": "day",
 			"tableWeekly": "week",
-			"tableBiweekly": "two_weeks",
 			"tableMonthly": "month",
 		};
 		const base = baseMap[tableId] || tableId;
@@ -633,17 +688,38 @@ layout: default
 			return;
 		}
 
-		const cleaned = parseRows(rows, headerMap);
+		let cleaned = parseRows(rows, headerMap);
+		syncDateInputs(cleaned);
+		cleaned = applyDateFilter(cleaned);
 		const agg = aggregate(cleaned);
 		lastDateKey = agg.maxDate ? formatDateUTC(agg.maxDate) : "";
 		destroyCharts();
 
+		const startRaw = startDateInput ? startDateInput.value : "";
+		const endRaw = endDateInput ? endDateInput.value : "";
+		const startDt = startRaw ? parseDate(startRaw) : null;
+		const endDt = endRaw ? parseDate(endRaw) : null;
+		let daysSpan = null;
+		if (startDt && endDt) {
+			daysSpan = Math.floor((endDt.getTime() - startDt.getTime()) / 86400000) + 1;
+		} else {
+			const { minDate, maxDate } = computeMinMaxDate(cleaned);
+			if (minDate && maxDate) {
+				daysSpan = Math.floor((maxDate.getTime() - minDate.getTime()) / 86400000) + 1;
+			}
+		}
+		const showDaily = daysSpan !== null && daysSpan < 90;
+		const dailyCard = document.getElementById("dailyCard");
+		if (dailyCard) dailyCard.style.display = showDaily ? "block" : "none";
+
+		if (showDaily) {
+			renderTable("tableDaily", agg.daily);
+			chartDaily = renderChart("chartDaily", agg.daily, "day");
+		}
 		renderTable("tableWeekly", agg.weekly);
-		renderTable("tableBiweekly", agg.biweekly);
 		renderTable("tableMonthly", agg.monthly);
 
 		chartWeekly = renderChart("chartWeekly", agg.weekly, "week");
-		chartBiweekly = renderChart("chartBiweekly", agg.biweekly, "two_weeks");
 		chartMonthly = renderChart("chartMonthly", agg.monthly, "month");
 
 		if (chartGrid) chartGrid.style.display = "grid";
@@ -672,12 +748,16 @@ layout: default
 			let parsed = null;
 			if (headerIndex !== -1) {
 				parsed = rowsToObjects(rows, headerIndex);
+				lastRows = parsed.data;
+				lastFields = parsed.fields;
 				handleRows(parsed.data, parsed.fields);
 				return;
 			}
 			const firstNonEmpty = rows.findIndex((r) => (r || []).some((v) => String(v).trim() !== ""));
 			if (firstNonEmpty !== -1) {
 				parsed = rowsToObjects(rows, firstNonEmpty);
+				lastRows = parsed.data;
+				lastFields = parsed.fields;
 				handleRows(parsed.data, parsed.fields);
 				return;
 			}
@@ -702,6 +782,17 @@ layout: default
 			}
 		});
 	});
+
+	if (startDateInput) {
+		startDateInput.addEventListener("change", () => {
+			refreshFromLastData();
+		});
+	}
+	if (endDateInput) {
+		endDateInput.addEventListener("change", () => {
+			refreshFromLastData();
+		});
+	}
 
 	document.querySelectorAll(".export-btn").forEach((btn) => {
 		btn.addEventListener("click", () => {
