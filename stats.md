@@ -25,7 +25,7 @@ layout: default
 			choose .xlsx
 		</label>
 		<input id = "xlsxFile" class = "file-input" type = "file" accept = ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-		<label for = "startDate" class = "date-label">start</label>
+		<label for = "startDate" class = "date-label start">start</label>
 		<input id = "startDate" class = "date-input" type = "date">
 		<label for = "endDate" class = "date-label">end</label>
 		<input id = "endDate" class = "date-input" type = "date">
@@ -155,6 +155,9 @@ layout: default
 		align-items: center;
 		justify-content: center;
 		min-width: 120px;
+	}
+	.date-label.start {
+		margin-left: auto;
 	}
 	.date-label {
 		font-size: 0.9rem;
