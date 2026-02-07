@@ -517,17 +517,23 @@ layout: default
 					},
 				},
 				font: {
-					family: "\"CMU Serif\",\"Times New Roman\",serif",
+					family: "\"Inconsolata\", monospace",
 				},
 				scales: {
 					x: {
 						ticks: {
 							maxRotation: 30,
 							minRotation: 30,
+							font: {
+								family: "\"Inconsolata\", monospace",
+							},
 						},
 						title: {
 							display: true,
 							text: `t (${base})`,
+							font: {
+								family: "\"Inconsolata\", monospace",
+							},
 						},
 					},
 					y: {
@@ -535,6 +541,14 @@ layout: default
 						title: {
 							display: true,
 							text: "h (hours)",
+							font: {
+								family: "\"Inconsolata\", monospace",
+							},
+						},
+						ticks: {
+							font: {
+								family: "\"Inconsolata\", monospace",
+							},
 						},
 					},
 				},
