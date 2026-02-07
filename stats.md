@@ -21,10 +21,10 @@ layout: default
 	</p>
 
 	<div class = "upload">
-		<label for = "xlsxFile">
-			.xlsx file
+		<label for = "xlsxFile" class = "action-btn file-label">
+			choose .xlsx
 		</label>
-		<input id = "xlsxFile" type = "file" accept = ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+		<input id = "xlsxFile" class = "file-input" type = "file" accept = ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
 		<div id = "status" class = "status" aria-live = "polite"></div>
 	</div>
 
@@ -36,13 +36,10 @@ layout: default
 			<canvas id = "chartWeekly" height = "150"></canvas>
 			<div class = "card-actions">
 				<button class = "action-btn table-toggle" type = "button" data-target = "tableWeeklyWrap">
-					Show table
+					show table
 				</button>
 				<button class = "action-btn export-btn" type = "button" data-target = "tableWeekly">
 					export .csv
-				</button>
-				<button class = "action-btn export-plot-btn" type = "button" data-canvas = "chartWeekly">
-					export .pdf
 				</button>
 			</div>
 			<div class = "table-wrap" id = "tableWeeklyWrap" hidden>
@@ -69,13 +66,10 @@ layout: default
 			<canvas id = "chartBiweekly" height = "150"></canvas>
 			<div class = "card-actions">
 				<button class = "action-btn table-toggle" type = "button" data-target = "tableBiweeklyWrap">
-					Show table
+					show table
 				</button>
 				<button class = "action-btn export-btn" type = "button" data-target = "tableBiweekly">
 					export .csv
-				</button>
-				<button class = "action-btn export-plot-btn" type = "button" data-canvas = "chartBiweekly">
-					export .pdf
 				</button>
 			</div>
 			<div class = "table-wrap" id = "tableBiweeklyWrap" hidden>
@@ -102,13 +96,10 @@ layout: default
 			<canvas id = "chartMonthly" height = "150"></canvas>
 			<div class = "card-actions">
 				<button class = "action-btn table-toggle" type = "button" data-target = "tableMonthlyWrap">
-					Show table
+					show table
 				</button>
 				<button class = "action-btn export-btn" type = "button" data-target = "tableMonthly">
 					export .csv
-				</button>
-				<button class = "action-btn export-plot-btn" type = "button" data-canvas = "chartMonthly">
-					export .pdf
 				</button>
 			</div>
 			<div class = "table-wrap" id = "tableMonthlyWrap" hidden>
@@ -146,8 +137,20 @@ layout: default
 	.navbar-ul { display: none; }
 	.upload {
 		margin: 1rem 0 1.5rem 0;
-		display: grid;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
 		gap: 0.5rem;
+	}
+	.file-input {
+		position: absolute;
+		left: -9999px;
+	}
+	.file-label {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 120px;
 	}
 	.status {
 		font-size: 0.9rem;
@@ -246,7 +249,6 @@ layout: default
 
 <script src = "stats/xlsx.full.min.js"></script>
 <script src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src = "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 	const keepTypes = new Set([
 		"billable",
@@ -482,7 +484,7 @@ layout: default
 		}
 	}
 
-	function renderChart(canvasId, rows, title) {
+	function renderChart(canvasId, rows, base) {
 		const labels = rows.map((r) => r.key);
 		const data = rows.map((r) => Number(r.value.toFixed(2)));
 		const ctx = document.getElementById(canvasId).getContext("2d");
@@ -491,7 +493,7 @@ layout: default
 			data: {
 				labels,
 				datasets: [{
-					label: title,
+					label: `hours (${base})`,
 					data,
 					borderColor: "#111",
 					backgroundColor: "rgba(0,0,0,0.05)",
@@ -505,6 +507,14 @@ layout: default
 				maintainAspectRatio: false,
 				plugins: {
 					legend: { display: false },
+					tooltip: {
+						callbacks: {
+							label: (ctx) => {
+								const val = Number.isFinite(ctx.parsed.y) ? ctx.parsed.y.toFixed(2) : ctx.parsed.y;
+								return `hours (${base}) = ${val}`;
+							},
+						},
+					},
 				},
 				font: {
 					family: "\"CMU Serif\",\"Times New Roman\",serif",
@@ -515,9 +525,17 @@ layout: default
 							maxRotation: 30,
 							minRotation: 30,
 						},
+						title: {
+							display: true,
+							text: `t (${base})`,
+						},
 					},
 					y: {
 						beginAtZero: true,
+						title: {
+							display: true,
+							text: "h (hours)",
+						},
 					},
 				},
 			},
@@ -593,35 +611,6 @@ layout: default
 		URL.revokeObjectURL(url);
 	}
 
-	function exportChartPdf(canvasId) {
-		const canvas = document.getElementById(canvasId);
-		if (!canvas || typeof window.jspdf === "undefined" || !window.jspdf.jsPDF) return;
-		const { jsPDF } = window.jspdf;
-		const imgData = canvas.toDataURL("image/png", 1.0);
-		const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-		const pageWidth = pdf.internal.pageSize.getWidth();
-		const pageHeight = pdf.internal.pageSize.getHeight();
-		const padding = 36;
-		const maxWidth = pageWidth - padding * 2;
-		const maxHeight = pageHeight - padding * 2;
-		const imgWidth = canvas.width;
-		const imgHeight = canvas.height;
-		const scale = Math.min(maxWidth / imgWidth, maxHeight / imgHeight);
-		const w = imgWidth * scale;
-		const h = imgHeight * scale;
-		const x = (pageWidth - w) / 2;
-		const y = (pageHeight - h) / 2;
-		pdf.addImage(imgData, "PNG", x, y, w, h);
-		const baseMap = {
-			"chartWeekly": "week",
-			"chartBiweekly": "two_weeks",
-			"chartMonthly": "month",
-		};
-		const base = baseMap[canvasId] || canvasId;
-		const dateSuffix = lastDateKey ? `_${lastDateKey}` : "";
-		pdf.save(`billable_hours_${base}_plot${dateSuffix}.pdf`);
-	}
-
 	function handleRows(rows, fields) {
 		const headerMap = normalizeHeaders(fields);
 		if (!headerMap.date || !headerMap.hours || !headerMap.type) {
@@ -639,12 +628,12 @@ layout: default
 		renderTable("tableBiweekly", agg.biweekly);
 		renderTable("tableMonthly", agg.monthly);
 
-		chartWeekly = renderChart("chartWeekly", agg.weekly, "Weekly hours");
-		chartBiweekly = renderChart("chartBiweekly", agg.biweekly, "Biweekly hours");
-		chartMonthly = renderChart("chartMonthly", agg.monthly, "Monthly hours");
+		chartWeekly = renderChart("chartWeekly", agg.weekly, "week");
+		chartBiweekly = renderChart("chartBiweekly", agg.biweekly, "two_weeks");
+		chartMonthly = renderChart("chartMonthly", agg.monthly, "month");
 
 		if (chartGrid) chartGrid.style.display = "grid";
-		setStatus(`Loaded ${cleaned.length} rows. Showing billable/pro bono/recruitment/management/practice development only.`);
+		setStatus(`loaded ${cleaned.length} rows (showing billable only, billable/pro bono/recruitment/management/practice development).`);
 	}
 
 	fileInput.addEventListener("change", () => {
@@ -692,10 +681,10 @@ layout: default
 			const isHidden = wrap.hasAttribute("hidden");
 			if (isHidden) {
 				wrap.removeAttribute("hidden");
-				btn.textContent = "Hide table";
+				btn.textContent = "hide table";
 			} else {
 				wrap.setAttribute("hidden", "");
-				btn.textContent = "Show table";
+				btn.textContent = "show table";
 			}
 		});
 	});
@@ -707,10 +696,4 @@ layout: default
 		});
 	});
 
-	document.querySelectorAll(".export-plot-btn").forEach((btn) => {
-		btn.addEventListener("click", () => {
-			const canvasId = btn.getAttribute("data-canvas");
-			exportChartPdf(canvasId);
-		});
-	});
 </script>
